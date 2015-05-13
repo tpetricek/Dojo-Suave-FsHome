@@ -1,34 +1,16 @@
-// --------------------------------------------------------------------------------------
-// FAKE build script
-// --------------------------------------------------------------------------------------
-
-#r @"packages/FAKE/tools/FakeLib.dll"
-
+#r "packages/FAKE/tools/FakeLib.dll"
 open Fake
 
-
-
 // --------------------------------------------------------------------------------------
-// Run all targets by default. Invoke 'build <Target>' to override
-
-Target "All" DoNothing
-
-Target "Test" (fun _ ->
-  System.Environment.GetCommandLineArgs() |> printfn "%A"
-)
+// Minimal Azure deploy script - just overwrite old files with new ones
+// --------------------------------------------------------------------------------------
 
 Target "Deploy" (fun _ ->
-  let findParam name = 
-    System.Environment.GetCommandLineArgs() |> Seq.pick (fun param ->
-      if param.StartsWith(name) then Some(param.Substring(name.Length)) else None)
-
-  printfn "More sutff..."
-  System.Environment.GetCommandLineArgs() |> printfn "%A"
-
-  let fromDir = findParam "--from:"
-  printfn "Deploying...\nFrom:%s\n" fromDir 
-
-  CleanDir (fromDir @@ "../wwwroot")
+  let sourceDirectory = __SOURCE_DIRECTORY__
+  let wwwrootDirectory = __SOURCE_DIRECTORY__ @@ "../wwwroot"
+  CleanDir wwwrootDirectory
+  CopyRecursive sourceDirectory wwwrootDirectory false |> ignore
 )
 
+Target "All" DoNothing
 RunTargetOrDefault "All"
