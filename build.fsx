@@ -4,18 +4,17 @@
 //  2) Deploys the web application to Azure web sites when called with 'build deploy'
 // --------------------------------------------------------------------------------------
 
+#r "packages/FSharp.Compiler.Service/lib/net45/FSharp.Compiler.Service.dll"
 #r "packages/Suave/lib/net40/Suave.dll"
 #r "packages/FAKE/tools/FakeLib.dll"
 open Fake
-(*
-//#r "packages/FSharp.Compiler.Service/lib/net45/FSharp.Compiler.Service.dll"
 
 open System
 open System.IO
 open Suave
 open Suave.Web
 open Suave.Types
-//open Microsoft.FSharp.Compiler.Interactive.Shell
+open Microsoft.FSharp.Compiler.Interactive.Shell
 
 // --------------------------------------------------------------------------------------
 // The following uses FileSystemWatcher to look for changes in 'app.fsx'. When
@@ -83,7 +82,7 @@ Target "run" (fun _ ->
   traceImportant "Waiting for app.fsx edits. Press any key to stop."
   System.Console.ReadLine() |> ignore
 )
-*)
+
 // --------------------------------------------------------------------------------------
 // Minimal Azure deploy script - just overwrite old files with new ones
 // --------------------------------------------------------------------------------------
