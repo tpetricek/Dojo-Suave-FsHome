@@ -11,7 +11,12 @@ exit_code=$?
 if [ $exit_code -ne 0 ]; then
   exit $exit_code
 fi
-$MONO .paket/paket.exe restore
+if [ -e "paket.lock" ]
+then
+  $MONO .paket/paket.exe restore
+else
+  $MONO .paket/paket.exe install
+fi
 exit_code=$?
 if [ $exit_code -ne 0 ]; then
   exit $exit_code
