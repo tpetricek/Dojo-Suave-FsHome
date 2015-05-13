@@ -6,10 +6,10 @@
 
 #r "packages/Suave/lib/net40/Suave.dll"
 #r "packages/FAKE/tools/FakeLib.dll"
+open Fake
 (*
 //#r "packages/FSharp.Compiler.Service/lib/net45/FSharp.Compiler.Service.dll"
 
-open Fake
 open System
 open System.IO
 open Suave
