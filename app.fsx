@@ -20,14 +20,16 @@ let app : WebPart = OK("minimalism")
 
 #if DO_NOT_START_SERVER
 #else
-let (|TryInt|_|) s = 
-  match System.Int32.TryParse s with true, n -> Some n | _ -> None
+let (|IntEnvVar|_|) name () = 
+  match System.Int32.TryParse(System.Environment.GetEnvironmentVariable(name)) with
+  | true, n -> Some n | _ -> None
+
 let serverConfig =
   let ip, port = 
-    match System.Environment.GetEnvironmentVariable("PORT"), getBuildParam "port" with
-    | TryInt port, _ -> "0.0.0.0", port   // Running on Heroku
-    | _, TryInt port -> "127.0.0.1", port // Running on Azure
-    | _ -> "127.0.0.1", 8083              // Running locally
+    match () with
+    | IntEnvVar "PORT" port -> "0.0.0.0", port                 // Running on Heroku
+    | IntEnvVar "HTTP_PLATFORM_PORT" port -> "127.0.0.1", port // Running on Azure
+    | _ -> "127.0.0.1", 8083                                   // Running locally
   { defaultConfig with
       homeFolder = Some __SOURCE_DIRECTORY__
       logger = Logging.Loggers.saneDefaultsFor Logging.LogLevel.Warn
