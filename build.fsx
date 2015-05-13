@@ -18,7 +18,14 @@ Target "Test" (fun _ ->
 )
 
 Target "Deploy" (fun _ ->
-  printfn "Deploying..."
+  let findParam name = 
+    System.Environment.GetCommandLineArgs() |> Seq.pick (fun param ->
+      if param.StartsWith(name) then Some(param.Substring(name.Length)) else None)
+
+  let fromDir, toDir = findParam "--from:", findParam "--to:"
+  printfn "Deploying...\nFrom:%s\nTo:%s" fromDir toDir
+
+  printfn "More sutff..."
   System.Environment.GetCommandLineArgs() |> printfn "%A"
 )
 

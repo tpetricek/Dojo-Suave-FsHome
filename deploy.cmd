@@ -14,4 +14,4 @@ if errorlevel 1 (
   exit /b %errorlevel%
 )
 
-packages\FAKE\tools\FAKE.exe Deploy --fsiargs build.fsx %~dp0%
+packages\FAKE\tools\FAKE.exe Deploy --fsiargs build.fsx --from:%~dp0% --to:%~dp0%..\wwwroot
