@@ -28,6 +28,7 @@ Target "Deploy" (fun _ ->
   let fromDir = findParam "--from:"
   printfn "Deploying...\nFrom:%s\n" fromDir 
 
+  CleanDir (fromDir @@ "../wwwroot")
 )
 
 RunTargetOrDefault "All"
