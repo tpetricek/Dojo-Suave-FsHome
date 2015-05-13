@@ -7,6 +7,8 @@
 open Fake
 
 
+System.Environment.GetCommandLineArgs() |> printfn "%A"
+
 // --------------------------------------------------------------------------------------
 // Run all targets by default. Invoke 'build <Target>' to override
 
