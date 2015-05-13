@@ -25,8 +25,8 @@ Target "Deploy" (fun _ ->
   printfn "More sutff..."
   System.Environment.GetCommandLineArgs() |> printfn "%A"
 
-  let fromDir, toDir = findParam "--from:", findParam "--to:"
-  printfn "Deploying...\nFrom:%s\nTo:%s" fromDir toDir
+  let fromDir = findParam "--from:"
+  printfn "Deploying...\nFrom:%s\n" fromDir 
 
 )
 
