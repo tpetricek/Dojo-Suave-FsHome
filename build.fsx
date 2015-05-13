@@ -22,11 +22,12 @@ Target "Deploy" (fun _ ->
     System.Environment.GetCommandLineArgs() |> Seq.pick (fun param ->
       if param.StartsWith(name) then Some(param.Substring(name.Length)) else None)
 
+  printfn "More sutff..."
+  System.Environment.GetCommandLineArgs() |> printfn "%A"
+
   let fromDir, toDir = findParam "--from:", findParam "--to:"
   printfn "Deploying...\nFrom:%s\nTo:%s" fromDir toDir
 
-  printfn "More sutff..."
-  System.Environment.GetCommandLineArgs() |> printfn "%A"
 )
 
 RunTargetOrDefault "All"
