@@ -1,8 +1,10 @@
+#r "packages/Microsoft.AspNet.Razor/lib/net45/System.Web.Razor.dll"
+if (typeof<System.Web.Razor.ParserResults>.Assembly.GetName().Version.Major <= 2) then 
+  failwith "Wrong System.Web.Razor Version loaded!" 
 #r "packages/FSharp.Data/lib/net40/FSharp.Data.dll"
 #r "packages/Suave/lib/net40/Suave.dll"
 #r "packages/Suave.Razor/lib/net40/Suave.Razor.dll"
 #r "packages/RazorEngine/lib/net40/RazorEngine.dll"
-#r "packages/Microsoft.AspNet.Razor/lib/net45/System.Web.Razor.dll"
 
 open System
 open System.IO
