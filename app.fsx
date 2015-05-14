@@ -1,7 +1,6 @@
 #r "System.Xml.Linq.dll"
 #r "packages/Suave/lib/net40/Suave.dll"
 #r "packages/FSharp.Data/lib/net40/FSharp.Data.dll"
-
 open System
 open System.IO
 open Suave
@@ -11,117 +10,153 @@ open Suave.Types
 open FSharp.Data
 
 // ----------------------------------------------------------------------------
-// Helper functions for formatting long text & date
+// Step #1: Introducing Suave
 // ----------------------------------------------------------------------------
 
-open System.Text.RegularExpressions
+// In Suave 'WebPart' represents a (part of a) web server. The following creates
+// a simple web part that always succeeds and returns "Hello world!"
+let app_1 = Successful.OK("Hello world!")
 
-let stripHtml (html:string) = 
-  Regex.Replace(html, "<.*?>", "")
-  
-let formatText length (comment:string) =
-  let comment = comment.Replace("\n", " ").Replace("\r", " ")
-  let short = comment.Substring(0, min length (comment.Length))
-  if short.Length < comment.Length then short + "..." else short
 
-let formatDate (date:DateTime) = 
-  let ts = DateTime.Now - date
-  if ts.TotalDays > 1.0 then sprintf "%d days ago" (int ts.TotalDays)
-  elif ts.TotalHours > 1.0 then sprintf "%d hours ago" (int ts.TotalHours)
-  elif ts.TotalMinutes > 1.0 then sprintf "%d minutes ago" (int ts.TotalMinutes)
-  else "just now"
+// You can now start the server in a number of ways - the basic is 
+// 'startWebServer' function. In this Dojo, you have two options - one is
+// to use the `build` command (which automatically reloads your site when
+// the `app.fsx` file changes) or you can run the code below from F# Interactive
+
+if false then 
+  // Starts the server on http://localhost:8083
+  let config = { defaultConfig with homeFolder = Some __SOURCE_DIRECTORY__ }
+  let _, server = startWebServerAsync config app_1
+  let cts = new System.Threading.CancellationTokenSource()
+  Async.Start(server, cts.Token)
+  // Kill the server (to free the port before you can restart it)
+  cts.Cancel()
+
 
 // ----------------------------------------------------------------------------
-// Getting blog news via RSS feed
+// Step #2: Routing using Suave combinators
 // ----------------------------------------------------------------------------
+
+open Suave.Http.Successful
+open Suave.Http.RequestErrors
+open Suave.Http.Applicatives
+
+let app_2 : WebPart =
+  choose
+    [ path "/" >>= OK "See <a href=\"/add/40/2\">40 + 2</a>"
+      pathScan "/add/%d/%d" (fun (a,b) -> OK((a + b).ToString()))
+      NOT_FOUND "Found no handlers" ]
+
+// If you feel like the world needs one more FizzBuzz, then add a handler
+// that handles "/fizzbuzz/%d" and prints the result of fizz buzz for a
+// number %d together with a link to the next number!
+
+
+// ----------------------------------------------------------------------------
+// Step #3: Doing more useful things!
+// ----------------------------------------------------------------------------
+
+// The following snippet uses the JSON type provider to call OpenWeatherMap
+// to get the current temperature and weather icon for London:
+
+type Weather = JsonProvider<"http://api.openweathermap.org/data/2.5/weather?units=metric&q=Prague">
+
+if false then
+  let city = "London,UK"
+  let london = Weather.Load("http://api.openweathermap.org/data/2.5/weather?units=metric&q=" + city)
+  printfn "%A" london.Main.Temp
+  printfn "http://openweathermap.org/img/w/%s.png" london.Weather.[0].Icon
+
+// Create a web server that returns a page with the current weather 
+// when we request: http://localhost:8083/weather/london
+
+
+// ----------------------------------------------------------------------------
+// Step #4: Understanding Suave WebParts and writing asynchronous servers
+// ----------------------------------------------------------------------------
+
+// Under the cover WebPart is a function 'Context -> Async<Context>'. We
+// can write it directly as a function and use asynchronous operations
+// in the body to avoid blocking
+
+let app_4 : WebPart = fun ctx -> async {
+  match ctx.request.url.LocalPath with
+  | "/wait" ->
+      let time = "1000" |> defaultArg (ctx.request.queryParam "time")
+      do! Async.Sleep(int time)
+      return! ctx |> OK (sprintf "Waited %d ms" (int time))
+  | _ -> 
+      return! ctx |> NOT_FOUND "Not found" }
+
+
+// TODO: Improve the previous server so that it calls `Weather.AsyncLoad` 
+// and avoids blocking (you can also change the URL format to use 
+// "/weather?city=London,UK", because that will make things easier!)
+
+
+// ----------------------------------------------------------------------------
+// Step #5: Writing F# home page web site using Suave.io
+// ----------------------------------------------------------------------------
+
+// Now, we want to write "F# homepage" that will show all the things
+// that matter on the internet - recent F# blogs, starred F# projects
+// on GitHub and recent comments and pull requests from the F# github org.
+// Here are some useful snippets: http://fssnip.net/r0
+
+// The following uses F# Data to define types that you'll need:
 
 type RssFeed = XmlProvider<"http://fpish.net/rss/blogs/tag/1/f~23">
-
-let getFeedNews () = async {
-  let! rss = Http.AsyncRequestString("http://fpish.net/rss/blogs/tag/1/f~23")
-  let feed = RssFeed.Parse(rss)
-  let html = 
-    [ for item in feed.Channel.Items do
-        yield "<li>"
-        yield sprintf "<h3><a href=\"%s\">%s</a></h3>" item.Link item.Title
-        yield sprintf "<p class=\"date\">%s</p>" (formatDate item.PubDate)
-        yield sprintf "<p>%s</p>" (formatText 500 (stripHtml (defaultArg item.Description "")))
-        yield "</li>" ]
-  return String.concat "" html }
-
-// ----------------------------------------------------------------------------
-// Searching for starred F# projects on GitHub
-// ----------------------------------------------------------------------------
-
 type GithubSearch = JsonProvider<"jsons/github-search.json">
+type GithubEvents = JsonProvider<"jsons/github-events.json">
 
-let getGithubProjects () = async {
+// To get the RSS feed or to call GitHub API, you need `Http.RequestString`
+// (the following sample shows `async` version of those, but feel free to
+// start with a synchronous version)
+
+let demo = async { 
+  // Read the RSS feed
+  let! rss = Http.AsyncRequestString("http://fpish.net/rss/blogs/tag/1/f~23")
+
+  // Get recent starred F# projects from GitHub
   let! res = 
     Http.AsyncRequestString
       ( "https://api.github.com/search/repositories?q=language:fsharp&sort=stars&order=desc", 
         httpMethod="GET", headers=[
           HttpRequestHeaders.Accept "application/vnd.github.v3+json"; 
           HttpRequestHeaders.UserAgent "SuaveDemo"] )
-  let search = GithubSearch.Parse(res)
+
+  // Finally, to request the F# org events, you can use the
+  // following URL: https://api.github.com/orgs/fsharp/events
+  // (Otherwise, the request you need is exactly the same)
+  return 0 }
+
+
+let getFeedNews () = async {  
+  // TODO: Format the news from RSS feed as HTML and return it
   let html = 
-    [ for it in search.Items do
+    [ for item in 1 .. 10 do
         yield "<li>"
-        yield sprintf "<h3><a href=\"%s\">%s</a></h3>" it.HtmlUrl it.Name
-        yield sprintf "<p>%s</p>" (defaultArg it.Description "")
+        yield sprintf "<h3><a href=\"%s\">Nothing happened (#%d)</a></h3>" "#" item
+        yield sprintf "<p class=\"date\">%s</p>" "Just now"
+        yield sprintf "<p>Nothing happened, nothing is happening and nothing will ever happen</p>"
         yield "</li>" ]
   return String.concat "" html }
-  
-// ----------------------------------------------------------------------------
-// Searching for recent GitHub events in 'fsharp' organization
-// ----------------------------------------------------------------------------
-
-type GithubEvents = JsonProvider<"jsons/github-events.json">
-
-let getGithubEvents () = async { 
-  let! eventsJson = 
-    Http.AsyncRequestString
-      ( "https://api.github.com/orgs/fsharp/events", 
-        httpMethod="GET", headers=[
-          HttpRequestHeaders.Accept "application/vnd.github.v3+json"; 
-          HttpRequestHeaders.UserAgent "SuaveDemo"] )
-  let events = GithubEvents.Parse(eventsJson)
-  let html = 
-    [ for evt in events do
-        if evt.Payload.Comment.IsSome || evt.Payload.PullRequest.IsSome then
-          yield "<li>"
-          yield sprintf "<img src=\"%s\" />" evt.Actor.AvatarUrl
-          yield sprintf "<p>%s <a href=\"http://github.com/%s\">@%s</a>" 
-                  (formatDate evt.CreatedAt) evt.Actor.Login evt.Actor.Login
-
-          match evt.Payload.Comment, evt.Payload.PullRequest with
-          | Some cmt, _ -> 
-              yield sprintf "<a href=\"%s\">commented</a>:</p>" cmt.HtmlUrl
-              yield sprintf "<p class=\"body\">%s</p>" (formatText 100 cmt.Body)
-          | _, Some pr -> 
-              let action = evt.Payload.Action.Value
-              let action = if action = "closed" && pr.Merged then "merged" else action
-              yield sprintf "<a href=\"%s\">%s</a>:</p>" pr.HtmlUrl action
-              yield sprintf "<p class=\"body\">%s</p>" (formatText 100 pr.Title)
-          | _ -> ()          
-          yield "</li>" ]
-  return String.concat "" html }
-
-// ----------------------------------------------------------------------------
-// Minimal server to host the site
-// ----------------------------------------------------------------------------
 
 let template = Path.Combine(__SOURCE_DIRECTORY__, "web/index.html")
 let html = File.ReadAllText(template)
 
 /// The main handler for Suave server!
-let app ctx = async {
-  let! data = 
-    [ getFeedNews()
-      getGithubEvents()
-      getGithubProjects() ]
-    |> Async.Parallel
+let app_5 ctx = async {
+  let! data = [ getFeedNews() ] |> Async.Parallel
   let html = 
     html.Replace("[FEED-NEWS]", data.[0])
-        .Replace("[GITHUB-NEWS]", data.[1])
-        .Replace("[GITHUB-PROJECTS]", data.[2])
+        .Replace("[GITHUB-NEWS]", "")
+        .Replace("[GITHUB-PROJECTS]", "")
   return! ctx |> Successful.OK(html) }
+
+// ----------------------------------------------------------------------------
+// Entry point - the 'build' script assumes there is a top-level value
+// called `app` - so define `app` to refer to the current step!
+// ----------------------------------------------------------------------------
+
+let app = app_1
