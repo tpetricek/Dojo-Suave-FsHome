@@ -1,24 +1,52 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-  <title>F# News</title>
+  <title>The latest F# news!</title>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href='http://fonts.googleapis.com/css?family=Cardo:400,700,400italic' rel='stylesheet' type='text/css'>
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
   <style type="text/css">
     body { font-family: 'Cardo', serif; }
+    h1 { text-align:center; margin:30px; font-weight:bold; }
+    h2 { margin-top:20px; }
+    .col-md-4 h3 { font-size:16pt; }
     .gh img { width:32px; float:left; margin:0px 10px 20px 0px; }
     .gh p { margin:0px 0px 5px 0px; }
     .gh p.body { margin:0px 0px 20px 0px; }    
-    li { list-style-type:none; }
+    p.date { font-style:italic; }
+    li { list-style-type:none; margin-left:0px; }
+    ul { margin-left:0px; padding-left:0px; }
   </style>
 </head>
 <body>
-  <h1>The latest F# news!</h1>
+  <div class="container">
+    <h1>The latest F# news!</h1>
+  </div>
 
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8">
+        <h2>F# blogs</h2>
+        <ul class="gh">
+          [FEED-NEWS]
+        </ul>
+      </div>
+      <div class="col-md-4">
+        <h2>Github updates</h2>
+        <ul class="gh">
+          [GITHUB-NEWS]
+        </ul>
 
-  <ul class="gh">
-    [GITHUB-NEWS]
-  </ul>
+        <h2>Github projects</h2>
+        <ul class="gh">
+          [GITHUB-PROJECTS]
+        </ul>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

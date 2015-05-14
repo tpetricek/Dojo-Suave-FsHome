@@ -1,3 +1,4 @@
+#r "System.Xml.Linq.dll"
 #r "packages/Suave/lib/net40/Suave.dll"
 #r "packages/FSharp.Data/lib/net40/FSharp.Data.dll"
 
@@ -9,33 +10,18 @@ open Suave.Http
 open Suave.Types
 open FSharp.Data
 
-type GithubSearch = JsonProvider<"jsons/github-search.json">
-type GithubEvents = JsonProvider<"jsons/github-events.json">
+// ----------------------------------------------------------------------------
+// Helper functions for formatting long text & date
+// ----------------------------------------------------------------------------
 
-let res = 
-  Http.RequestString
-    ( "https://api.github.com/search/repositories?q=language:fsharp&sort=stars&order=desc", 
-      httpMethod="GET", headers=[
-        HttpRequestHeaders.Accept "application/vnd.github.v3+json"; 
-        HttpRequestHeaders.UserAgent "SuaveDemo"] )
+open System.Text.RegularExpressions
 
-let search = GithubSearch.Parse(res)
-for it in search.Items do
-  printfn "%s" it.Name
-
-type GitHubEvent = 
-  { User : string 
-    UserIcon : string
-    Ago : string
-    Action : string
-    Text : string 
-    Url : string }
-  static member Create(user, userIcon, ago) = 
-    { User = user; UserIcon = userIcon; Ago = ago; Action = ""; Text = ""; Url = "" }
-
-let formatComment (comment:string) =
+let stripHtml (html:string) = 
+  Regex.Replace(html, "<.*?>", "")
+  
+let formatText length (comment:string) =
   let comment = comment.Replace("\n", " ").Replace("\r", " ")
-  let short = comment.Substring(0, min 100 (comment.Length))
+  let short = comment.Substring(0, min length (comment.Length))
   if short.Length < comment.Length then short + "..." else short
 
 let formatDate (date:DateTime) = 
@@ -45,41 +31,97 @@ let formatDate (date:DateTime) =
   elif ts.TotalMinutes > 1.0 then sprintf "%d minutes ago" (int ts.TotalMinutes)
   else "just now"
 
-let getEvents () = async { 
+// ----------------------------------------------------------------------------
+// Getting blog news via RSS feed
+// ----------------------------------------------------------------------------
+
+type RssFeed = XmlProvider<"http://fpish.net/rss/blogs/tag/1/f~23">
+
+let getFeedNews () = async {
+  let! rss = Http.AsyncRequestString("http://fpish.net/rss/blogs/tag/1/f~23")
+  let feed = RssFeed.Parse(rss)
+  let html = 
+    [ for item in feed.Channel.Items do
+        yield "<li>"
+        yield sprintf "<h3><a href=\"%s\">%s</a></h3>" item.Link item.Title
+        yield sprintf "<p class=\"date\">%s</p>" (formatDate item.PubDate)
+        yield sprintf "<p>%s</p>" (formatText 500 (stripHtml (defaultArg item.Description "")))
+        yield "</li>" ]
+  return String.concat "" html }
+
+// ----------------------------------------------------------------------------
+// Searching for starred F# projects on GitHub
+// ----------------------------------------------------------------------------
+
+type GithubSearch = JsonProvider<"jsons/github-search.json">
+
+let getGithubProjects () = async {
+  let! res = 
+    Http.AsyncRequestString
+      ( "https://api.github.com/search/repositories?q=language:fsharp&sort=stars&order=desc", 
+        httpMethod="GET", headers=[
+          HttpRequestHeaders.Accept "application/vnd.github.v3+json"; 
+          HttpRequestHeaders.UserAgent "SuaveDemo"] )
+  let search = GithubSearch.Parse(res)
+  let html = 
+    [ for it in search.Items do
+        yield "<li>"
+        yield sprintf "<h3><a href=\"%s\">%s</a></h3>" it.HtmlUrl it.Name
+        yield sprintf "<p>%s</p>" (defaultArg it.Description "")
+        yield "</li>" ]
+  return String.concat "" html }
+  
+// ----------------------------------------------------------------------------
+// Searching for recent GitHub events in 'fsharp' organization
+// ----------------------------------------------------------------------------
+
+type GithubEvents = JsonProvider<"jsons/github-events.json">
+
+let getGithubEvents () = async { 
   let! eventsJson = 
     Http.AsyncRequestString
       ( "https://api.github.com/orgs/fsharp/events", 
         httpMethod="GET", headers=[
           HttpRequestHeaders.Accept "application/vnd.github.v3+json"; 
           HttpRequestHeaders.UserAgent "SuaveDemo"] )
-
   let events = GithubEvents.Parse(eventsJson)
-  let parsed = 
+  let html = 
     [ for evt in events do
-        let info = GitHubEvent.Create(evt.Actor.Login, evt.Actor.AvatarUrl, formatDate evt.CreatedAt)
-        match evt.Payload.Comment, evt.Payload.PullRequest with
-        | Some cmt, _ -> 
-            yield { info with Action = "commented"; Text = formatComment cmt.Body; Url = cmt.HtmlUrl }
-        | _, Some pr -> 
-            let action = evt.Payload.Action.Value
-            let action = if action = "closed" && pr.Merged then "merged" else action
-            yield { info with Action = action + " pull request"; Text = pr.Title; Url = pr.HtmlUrl }
-        | _ -> () ]
-  return parsed }
+        if evt.Payload.Comment.IsSome || evt.Payload.PullRequest.IsSome then
+          yield "<li>"
+          yield sprintf "<img src=\"%s\" />" evt.Actor.AvatarUrl
+          yield sprintf "<p>%s <a href=\"http://github.com/%s\">@%s</a>" 
+                  (formatDate evt.CreatedAt) evt.Actor.Login evt.Actor.Login
 
-let formatEvents events = 
-  [ for e in events do
-      yield "<li>"
-      yield sprintf "<img src=\"%s\" />" e.UserIcon
-      yield sprintf "<p>%s <a href=\"http://github.com/%s\">@%s</a>" e.Ago e.User e.User
-      yield sprintf "  <a href=\"%s\">%s</a>:</p>" e.Url e.Action
-      yield sprintf "<p class=\"body\">%s</p>" e.Text
-      yield "</li>" ] |> String.concat ""
+          match evt.Payload.Comment, evt.Payload.PullRequest with
+          | Some cmt, _ -> 
+              yield sprintf "<a href=\"%s\">commented</a>:</p>" cmt.HtmlUrl
+              yield sprintf "<p class=\"body\">%s</p>" (formatText 100 cmt.Body)
+          | _, Some pr -> 
+              let action = evt.Payload.Action.Value
+              let action = if action = "closed" && pr.Merged then "merged" else action
+              yield sprintf "<a href=\"%s\">%s</a>:</p>" pr.HtmlUrl action
+              yield sprintf "<p class=\"body\">%s</p>" (formatText 100 pr.Title)
+          | _ -> ()          
+          yield "</li>" ]
+  return String.concat "" html }
 
-let template = File.ReadAllText(Path.Combine(__SOURCE_DIRECTORY__, "web/index.html"))
+// ----------------------------------------------------------------------------
+// Minimal server to host the site
+// ----------------------------------------------------------------------------
+
+let template = Path.Combine(__SOURCE_DIRECTORY__, "web/index.html")
+let html = File.ReadAllText(template)
 
 /// The main handler for Suave server!
 let app ctx = async {
-  let! ghEvents = getEvents ()
-  let ghNews = formatEvents ghEvents
-  return! ctx |> Successful.OK(template.Replace("[GITHUB-NEWS]", ghNews)) }
+  let! data = 
+    [ getFeedNews()
+      getGithubEvents()
+      getGithubProjects() ]
+    |> Async.Parallel
+  let html = 
+    html.Replace("[FEED-NEWS]", data.[0])
+        .Replace("[GITHUB-NEWS]", data.[1])
+        .Replace("[GITHUB-PROJECTS]", data.[2])
+  return! ctx |> Successful.OK(html) }
