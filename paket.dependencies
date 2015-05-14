@@ -2,6 +2,5 @@ source https://nuget.org/api/v2
 
 nuget FAKE
 nuget Suave
-nuget Suave.Razor
 nuget FSharp.Data
 nuget FSharp.Compiler.Service

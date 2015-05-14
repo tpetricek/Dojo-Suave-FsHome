@@ -7,14 +7,7 @@ NUGET
     FSharp.Data (2.2.2)
       Zlib.Portable (>= 1.10.0) - framework: portable-net40+sl50+wp80+win80
     FsPickler (1.0.19)
-    Microsoft.AspNet.Razor (3.2.3) - framework: >= net45
-    RazorEngine (3.7.0)
-      Microsoft.AspNet.Razor (>= 3.0.0) - framework: >= net45
-      Microsoft.AspNet.Razor (2.0.30506.0) - framework: >= net40 < net45
     Suave (0.26.2)
       FSharp.Core (>= 3.1.2.1)
       FsPickler (>= 1.0.7)
-    Suave.Razor (0.26.2)
-      RazorEngine (>= 3.3.0)
-      Suave (>= 0.26.2)
     Zlib.Portable (1.10.0) - framework: portable-net40+sl50+wp80+win80

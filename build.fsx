@@ -76,9 +76,9 @@ Target "run" (fun _ ->
   Async.Start(server)
   // Open web browser with the loaded file
   System.Diagnostics.Process.Start("http://localhost:8083") |> ignore
-
+  
   // Watch for changes & reload when app.fsx changes
-  use watcher = !! "*.fsx" |> WatchChanges (fun _ -> reloadAppServer())
+  use watcher = !! (__SOURCE_DIRECTORY__ @@ "*.*") |> WatchChanges (fun _ -> reloadAppServer())
   traceImportant "Waiting for app.fsx edits. Press any key to stop."
   System.Console.ReadLine() |> ignore
 )
