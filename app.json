@@ -1,0 +1,11 @@
+{
+  "name": "Suave.io demo application",
+  "description": "Simple Suave.io web app with easy Heroku and Azure deployment",
+  "website": "http://suave.io/",
+  "repository": "https://github.com/tpetricek/suave-xplat-gettingstarted",
+  "logo": "https://raw.githubusercontent.com/SuaveIO/suave/gh-pages/images/logo.gif",
+  "keywords": [ "suave", "fsharp" ],
+  "env": {
+    "BUILDPACK_URL": "https://github.com/SuaveIO/mono-script-buildpack.git"
+  }
+}
