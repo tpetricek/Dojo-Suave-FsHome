@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Error</title>
+</head>
+<body>
+  <h2>
+      Github news
+  </h2>
+
+  <ul>
+    @foreach (dynamic a in Model)
+    {
+      <li>
+        <img src="@a.UserIcon" style="width:32px; float:left; margin:0px 10px 20px 0px;" />
+        <p style="margin:0px">
+          @a.Ago
+          <a href="http://github.com/@a.User">@@@a.User</a>
+          <a href="@a.Url">@a.Action</a>:
+        </p>
+        <p style="margin-top:0px">@a.Text</p>
+      </li>
+    }
+  </ul>
+
+</body>
+</html>
