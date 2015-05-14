@@ -1,3 +1,6 @@
+let asm = System.Reflection.Assembly.LoadFile(System.IO.Path.Combine(__SOURCE_DIRECTORY__, "packages/Microsoft.AspNet.Razor/lib/net45/System.Web.Razor.dll"))
+asm.GetTypes() |> ignore
+
 #r "packages/Microsoft.AspNet.Razor/lib/net45/System.Web.Razor.dll"
 if (typeof<System.Web.Razor.ParserResults>.Assembly.GetName().Version.Major <= 2) then 
   failwith "Wrong System.Web.Razor Version loaded!" 
