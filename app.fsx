@@ -18,12 +18,12 @@ open FSharp.Data
 let app_1 = Successful.OK("Hello world!")
 
 
-// You can now start the server in a number of ways - the basic is 
+// You can now start the server in a number of ways - the basic is
 // 'startWebServer' function. In this Dojo, you have two options - one is
 // to use the `build` command (which automatically reloads your site when
 // the `app.fsx` file changes) or you can run the code below from F# Interactive
 
-if false then 
+if false then
   // Starts the server on http://localhost:8083
   let config = { defaultConfig with homeFolder = Some __SOURCE_DIRECTORY__ }
   let _, server = startWebServerAsync config app_1
@@ -67,7 +67,7 @@ if false then
   printfn "%A" london.Main.Temp
   printfn "http://openweathermap.org/img/w/%s.png" london.Weather.[0].Icon
 
-// Create a web server that returns a page with the current weather 
+// Create a web server that returns a page with the current weather
 // when we request: http://localhost:8083/weather/london
 
 
@@ -79,20 +79,18 @@ if false then
 // can write it directly as a function and use asynchronous operations
 // in the body to avoid blocking
 
-let app_4 : WebPart = fun ctx -> async {
-  match ctx.request.url.LocalPath with
-  | "/wait" ->
-      let time = "1000" |> defaultArg (ctx.request.queryParam "time")
-      do! Async.Sleep(int time)
-      return! ctx |> OK (sprintf "Waited %d ms" (int time))
-  | _ -> 
-      return! ctx |> NOT_FOUND "Not found" }
+let waitAndReturn : WebPart = fun ctx -> async {
+  let time = "1000" |> defaultArg (ctx.request.queryParam "time")
+  do! Async.Sleep(int time)
+  return! ctx |> OK (sprintf "Waited %d ms" (int time)) }
 
+let app_4 =
+  choose
+    [ path "/wait" >>= waitAndReturn
+      NOT_FOUND "Found no handlers" ]
 
-// TODO: Improve the previous server so that it calls `Weather.AsyncLoad` 
-// and avoids blocking (you can also change the URL format to use 
-// "/weather?city=London,UK", because that will make things easier!)
-
+// TODO: Improve the previous server so that it calls
+// `Weather.AsyncLoad` and avoids blocking
 
 // ----------------------------------------------------------------------------
 // Step #5: Writing F# home page web site using Suave.io
@@ -113,16 +111,16 @@ type GithubEvents = JsonProvider<"jsons/github-events.json">
 // (the following sample shows `async` version of those, but feel free to
 // start with a synchronous version)
 
-let demo = async { 
+let demo = async {
   // Read the RSS feed
   let! rss = Http.AsyncRequestString("http://fpish.net/rss/blogs/tag/1/f~23")
 
   // Get recent starred F# projects from GitHub
-  let! res = 
+  let! res =
     Http.AsyncRequestString
-      ( "https://api.github.com/search/repositories?q=language:fsharp&sort=stars&order=desc", 
+      ( "https://api.github.com/search/repositories?q=language:fsharp&sort=stars&order=desc",
         httpMethod="GET", headers=[
-          HttpRequestHeaders.Accept "application/vnd.github.v3+json"; 
+          HttpRequestHeaders.Accept "application/vnd.github.v3+json";
           HttpRequestHeaders.UserAgent "SuaveDemo"] )
 
   // Finally, to request the F# org events, you can use the
@@ -131,9 +129,9 @@ let demo = async {
   return 0 }
 
 
-let getFeedNews () = async {  
+let getFeedNews () = async {
   // TODO: Format the news from RSS feed as HTML and return it
-  let html = 
+  let html =
     [ for item in 1 .. 10 do
         yield "<li>"
         yield sprintf "<h3><a href=\"%s\">Nothing happened (#%d)</a></h3>" "#" item
@@ -148,7 +146,7 @@ let html = File.ReadAllText(template)
 /// The main handler for Suave server!
 let app_5 ctx = async {
   let! data = [ getFeedNews() ] |> Async.Parallel
-  let html = 
+  let html =
     html.Replace("[FEED-NEWS]", data.[0])
         .Replace("[GITHUB-NEWS]", "")
         .Replace("[GITHUB-PROJECTS]", "")
