@@ -94,14 +94,16 @@ if false then
 // can write it directly as a function and use asynchronous operations
 // in the body to avoid blocking
 
-let waitAndReturn : WebPart = fun ctx -> async {
-  let time = "1000" |> defaultArg (ctx.request.queryParam "time")
+let waitAndReturn time : WebPart = fun ctx -> async {
+  let time = 1000 |> defaultArg time
   do! Async.Sleep(int time)
   return! ctx |> OK (sprintf "Waited %d ms" (int time)) }
 
 let app_4 =
   choose
-    [ path "/wait" >>= waitAndReturn
+    [ pathScan "/wait/%d" (fun time -> waitAndReturn (Some time))
+      path "/wait" >>= (waitAndReturn None)
+      path "/wait/" >>= (waitAndReturn None)
       NOT_FOUND "Found no handlers" ]
 
 // TASK #3: Async weather
@@ -247,4 +249,4 @@ let app_6 ctx = async {
 // called `app` - so define `app` to refer to the current step!
 // ----------------------------------------------------------------------------
 
-let app = app_1
+let app = app_4
